@@ -1,3 +1,4 @@
+using System.IO;
 var builder = WebApplication.CreateBuilder(args);
 var app = builder.Build();
 
@@ -5,7 +6,7 @@ var app = builder.Build();
 //get files
 app.MapGet("/files", (int id) =>
 {
-    
+    StreamReader sr = new StreamReader("C:\\basic.txt");
     return Results.NoContent();
 });
 
