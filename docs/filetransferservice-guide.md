@@ -227,11 +227,36 @@ Example:
 
 The API iterates through the list until a valid decryption is found.
 
+## Build and Publish
+
+The application multi-targets .NET 8 LTS and .NET 10. Build the target you want explicitly:
+
+```cmd
+dotnet build FileTransferServiceApi.sln -f net8.0
+dotnet build FileTransferServiceApi.sln -f net10.0
+```
+
+Publish a Windows executable for the runtime installed on the target computer:
+
+```cmd
+dotnet publish FileTransferServiceApi\FileTransferServiceApi.csproj -c Release -f net8.0 -r win-x64 --self-contained false
+dotnet publish FileTransferServiceApi\FileTransferServiceApi.csproj -c Release -f net10.0 -r win-x64 --self-contained false
+```
+
+Publish self-contained Windows executables when the target computer should not need a separately installed .NET runtime:
+
+```cmd
+dotnet publish FileTransferServiceApi\FileTransferServiceApi.csproj -c Release -f net8.0 -r win-x64 --self-contained true --ignore-failed-sources -o FileTransferServiceApi\Releases\win-x64-selfcontained-net8
+dotnet publish FileTransferServiceApi\FileTransferServiceApi.csproj -c Release -f net10.0 -r win-x64 --self-contained true --ignore-failed-sources -o FileTransferServiceApi\Releases\win-x64-selfcontained-net10
+```
+
+Use the `net8.0` build for the LTS runtime, for example when you want the broadest Windows 10 and Windows 11 deployment target. Use the `net10.0` build when the target computer has the .NET 10 runtime installed.
+
 ## Configuration for the API Service
 
 On the computer that will host the API, you should:
 
-1. Publish or build the application.
+1. Place the published application files in a folder on the computer.
 2. Update `appsettings.json`.
 3. Choose a port.
 4. Choose a storage folder.
@@ -258,14 +283,15 @@ Example:
 
 Start:
 
-```powershell
-dotnet run --project .\FileTransferServiceApi
+```cmd
+cd C:\FileTransferService
+FileTransferServiceApi.exe
 ```
 
 Then verify that the API responds:
 
-```powershell
-Invoke-RestMethod http://localhost:5050/health
+```cmd
+curl http://localhost:5050/health
 ```
 
 ## Configuration for the Client
@@ -289,14 +315,15 @@ Example:
 
 Example command:
 
-```powershell
-dotnet run --project .\FileTransferServiceApi -- send --file C:\Temp\report.pdf --url http://192.168.1.50:5050 --key super-secret-key
+```cmd
+cd C:\FileTransferService
+FileTransferServiceApi.exe send --file C:\Temp\report.pdf --url http://192.168.1.50:5050 --key super-secret-key
 ```
 
-With IP-based key encryption:
+With IP-based key encryption enabled in `appsettings.json`:
 
-```powershell
-dotnet run --project .\FileTransferServiceApi -- send --file C:\Temp\report.pdf --url http://192.168.1.50:5050 --key super-secret-key
+```cmd
+FileTransferServiceApi.exe send --file C:\Temp\report.pdf --url http://192.168.1.50:5050 --key super-secret-key
 ```
 
 Parameters:
@@ -312,8 +339,9 @@ When IP-based key encryption is enabled, the program tries to find an active loc
 
 Example command:
 
-```powershell
-dotnet run --project .\FileTransferServiceApi -- list --url http://192.168.1.50:5050 --key super-secret-key
+```cmd
+cd C:\FileTransferService
+FileTransferServiceApi.exe list --url http://192.168.1.50:5050 --key super-secret-key
 ```
 
 This command is the first step on the client side when you want to see what is currently waiting in the API queue.
@@ -343,8 +371,9 @@ No files available.
 
 Example command:
 
-```powershell
-dotnet run --project .\FileTransferServiceApi -- get --file report.pdf --url http://192.168.1.50:5050 --key super-secret-key --output C:\Temp\report.pdf
+```cmd
+cd C:\FileTransferService
+FileTransferServiceApi.exe get --file report.pdf --url http://192.168.1.50:5050 --key super-secret-key --output C:\Temp\report.pdf
 ```
 
 Parameters:
@@ -362,8 +391,8 @@ Where the file is stored on the client:
 
 Examples:
 
-```powershell
-dotnet run --project .\FileTransferServiceApi -- get --file report.pdf --url http://192.168.1.50:5050 --key super-secret-key --output C:\Temp\report.pdf
+```cmd
+FileTransferServiceApi.exe get --file report.pdf --url http://192.168.1.50:5050 --key super-secret-key --output C:\Temp\report.pdf
 ```
 
 This stores the file at:
@@ -372,8 +401,8 @@ This stores the file at:
 C:\Temp\report.pdf
 ```
 
-```powershell
-dotnet run --project .\FileTransferServiceApi -- get --file report.pdf --url http://192.168.1.50:5050 --key super-secret-key
+```cmd
+FileTransferServiceApi.exe get --file report.pdf --url http://192.168.1.50:5050 --key super-secret-key
 ```
 
 If this command is run from `C:\Tools\FileTransfer`, the file is stored at:
@@ -406,8 +435,9 @@ Recommended use:
 
 Example command:
 
-```powershell
-dotnet run --project .\FileTransferServiceApi -- delete --file report.pdf --url http://192.168.1.50:5050 --key super-secret-key
+```cmd
+cd C:\FileTransferService
+FileTransferServiceApi.exe delete --file report.pdf --url http://192.168.1.50:5050 --key super-secret-key
 ```
 
 Parameters:
@@ -443,10 +473,11 @@ When you work as a client against the API, the normal sequence is:
 
 Example session:
 
-```powershell
-dotnet run --project .\FileTransferServiceApi -- list --url http://192.168.1.50:5050 --key super-secret-key
-dotnet run --project .\FileTransferServiceApi -- get --file report.pdf --url http://192.168.1.50:5050 --key super-secret-key --output C:\Temp\report.pdf
-dotnet run --project .\FileTransferServiceApi -- delete --file report.pdf --url http://192.168.1.50:5050 --key super-secret-key
+```cmd
+cd C:\FileTransferService
+FileTransferServiceApi.exe list --url http://192.168.1.50:5050 --key super-secret-key
+FileTransferServiceApi.exe get --file report.pdf --url http://192.168.1.50:5050 --key super-secret-key --output C:\Temp\report.pdf
+FileTransferServiceApi.exe delete --file report.pdf --url http://192.168.1.50:5050 --key super-secret-key
 ```
 
 This gives you a predictable inbox-style flow:
