@@ -5,6 +5,7 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <DefaultItemExcludes>$(DefaultItemExcludes);bin\**;obj\**;Releases\**;artifacts\**</DefaultItemExcludes>
+    <Version>1.0.0</Version>
   </PropertyGroup>
 
 </Project>
