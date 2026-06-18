@@ -5,9 +5,12 @@ on:
   push:
     branches:
       - main
+    tags:
+      - "v*"
 
 permissions:
   contents: read
+  actions: read
 
 jobs:
   publish:
@@ -78,3 +81,71 @@ jobs:
           path: ${{ steps.package.outputs.archive-path }}
           if-no-files-found: error
           compression-level: 0
+
+  release:
+    name: Create GitHub Release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: publish
+    runs-on: windows-latest
+    permissions:
+      contents: write
+      actions: read
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v5
+
+      - name: Validate release version
+        shell: pwsh
+        run: |
+          [xml] $project = Get-Content "FileTransferServiceApi/FileTransferServiceApi.csproj"
+          $version = $project.Project.PropertyGroup.Version | Select-Object -First 1
+          $expectedTag = "v$version"
+
+          if ("${{ github.ref_name }}" -ne $expectedTag) {
+            throw "Git tag '${{ github.ref_name }}' does not match project version '$expectedTag'."
+          }
+
+      - name: Download build artifacts
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh run download "${{ github.run_id }}" `
+            --repo "${{ github.repository }}" `
+            --dir "${{ runner.temp }}/release-artifacts"
+
+      - name: Create release and upload ZIP files
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $tag = "${{ github.ref_name }}"
+          $zipFiles = Get-ChildItem `
+            -Path "${{ runner.temp }}/release-artifacts" `
+            -Filter "*.zip" `
+            -File `
+            -Recurse
+
+          if ($zipFiles.Count -ne 2) {
+            throw "Expected 2 ZIP files, but found $($zipFiles.Count)."
+          }
+
+          gh release view $tag --repo "${{ github.repository }}" *> $null
+
+          if ($LASTEXITCODE -eq 0) {
+            gh release upload $tag $zipFiles.FullName `
+              --repo "${{ github.repository }}" `
+              --clobber
+          }
+          else {
+            gh release create $tag $zipFiles.FullName `
+              --repo "${{ github.repository }}" `
+              --verify-tag `
+              --title "FTSApi $tag" `
+              --generate-notes
+          }
+
+          if ($LASTEXITCODE -ne 0) {
+            throw "GitHub Release creation failed."
+          }
