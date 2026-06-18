@@ -10,20 +10,13 @@ on:
 
 permissions:
   contents: read
-  actions: read
 
 jobs:
   publish:
-    name: Publish ${{ matrix.framework }}
+    name: Build release packages
     runs-on: windows-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - framework: net8.0
-            framework-name: net8
-          - framework: net10.0
-            framework-name: net10
+    permissions:
+      contents: write
 
     steps:
       - name: Check out repository
@@ -36,7 +29,7 @@ jobs:
             8.0.x
             10.0.x
 
-      - name: Read version from project
+      - name: Read and validate version
         id: project
         shell: pwsh
         run: |
@@ -47,85 +40,52 @@ jobs:
             throw "No Version property was found in FileTransferServiceApi.csproj."
           }
 
-          "version=$version" >> $env:GITHUB_OUTPUT
-
-      - name: Publish ${{ matrix.framework }}
-        shell: pwsh
-        run: |
-          dotnet publish "FileTransferServiceApi/FileTransferServiceApi.csproj" `
-            --configuration Release `
-            --framework "${{ matrix.framework }}" `
-            --runtime win-x64 `
-            --self-contained true `
-            --output "${{ runner.temp }}/publish/${{ matrix.framework-name }}"
-
-      - name: Create ZIP archive
-        id: package
-        shell: pwsh
-        run: |
-          $fileName = "FTSApi-v${{ steps.project.outputs.version }}-win-x64-selfcontained-${{ matrix.framework-name }}.zip"
-          $archivePath = Join-Path "${{ runner.temp }}" $fileName
-
-          Compress-Archive `
-            -Path "${{ runner.temp }}/publish/${{ matrix.framework-name }}/*" `
-            -DestinationPath $archivePath `
-            -CompressionLevel Optimal
-
-          "file-name=$fileName" >> $env:GITHUB_OUTPUT
-          "archive-path=$archivePath" >> $env:GITHUB_OUTPUT
-
-      - name: Upload ZIP artifact
-        uses: actions/upload-artifact@v7
-        with:
-          name: ${{ steps.package.outputs.file-name }}
-          path: ${{ steps.package.outputs.archive-path }}
-          if-no-files-found: error
-          compression-level: 0
-
-  release:
-    name: Create GitHub Release
-    if: startsWith(github.ref, 'refs/tags/v')
-    needs: publish
-    runs-on: windows-latest
-    permissions:
-      contents: write
-      actions: read
-
-    steps:
-      - name: Check out repository
-        uses: actions/checkout@v5
-
-      - name: Validate release version
-        shell: pwsh
-        run: |
-          [xml] $project = Get-Content "FileTransferServiceApi/FileTransferServiceApi.csproj"
-          $version = $project.Project.PropertyGroup.Version | Select-Object -First 1
-          $expectedTag = "v$version"
-
-          if ("${{ github.ref_name }}" -ne $expectedTag) {
-            throw "Git tag '${{ github.ref_name }}' does not match project version '$expectedTag'."
+          if ("${{ github.ref_type }}" -eq "tag" -and "${{ github.ref_name }}" -ne "v$version") {
+            throw "Git tag '${{ github.ref_name }}' does not match project version 'v$version'."
           }
 
-      - name: Download build artifacts
+          "version=$version" >> $env:GITHUB_OUTPUT
+
+      - name: Publish and package .NET 8 and .NET 10
         shell: pwsh
-        env:
-          GH_TOKEN: ${{ github.token }}
         run: |
-          gh run download "${{ github.run_id }}" `
-            --repo "${{ github.repository }}" `
-            --dir "${{ runner.temp }}/release-artifacts"
+          $targets = @(
+            @{ Framework = "net8.0"; PackageName = "net8" },
+            @{ Framework = "net10.0"; PackageName = "net10" }
+          )
+
+          foreach ($target in $targets) {
+            $publishPath = Join-Path "${{ runner.temp }}/publish" $target.PackageName
+            $archivePath = Join-Path "${{ runner.temp }}" "FTSApi-win-x64-selfcontained-$($target.PackageName).zip"
+
+            dotnet publish "FileTransferServiceApi/FileTransferServiceApi.csproj" `
+              --configuration Release `
+              --framework $target.Framework `
+              --runtime win-x64 `
+              --self-contained true `
+              --output $publishPath
+
+            if ($LASTEXITCODE -ne 0) {
+              throw "Publishing $($target.Framework) failed."
+            }
+
+            Compress-Archive `
+              -Path "$publishPath/*" `
+              -DestinationPath $archivePath `
+              -CompressionLevel Optimal
+          }
 
       - name: Create release and upload ZIP files
+        if: github.ref_type == 'tag'
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           $tag = "${{ github.ref_name }}"
           $zipFiles = Get-ChildItem `
-            -Path "${{ runner.temp }}/release-artifacts" `
-            -Filter "*.zip" `
-            -File `
-            -Recurse
+            -Path "${{ runner.temp }}" `
+            -Filter "FTSApi-win-x64-selfcontained-*.zip" `
+            -File
 
           if ($zipFiles.Count -ne 2) {
             throw "Expected 2 ZIP files, but found $($zipFiles.Count)."
@@ -142,7 +102,7 @@ jobs:
             gh release create $tag $zipFiles.FullName `
               --repo "${{ github.repository }}" `
               --verify-tag `
-              --title "FTSApi $tag" `
+              --title "FTSApi v${{ steps.project.outputs.version }}" `
               --generate-notes
           }
 
