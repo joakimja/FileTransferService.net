@@ -1,0 +1,80 @@
+name: Build and publish
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    name: Publish ${{ matrix.framework }}
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - framework: net8.0
+            framework-name: net8
+          - framework: net10.0
+            framework-name: net10
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up .NET SDKs
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            8.0.x
+            10.0.x
+
+      - name: Read version from project
+        id: project
+        shell: pwsh
+        run: |
+          [xml] $project = Get-Content "FileTransferServiceApi/FileTransferServiceApi.csproj"
+          $version = $project.Project.PropertyGroup.Version | Select-Object -First 1
+
+          if ([string]::IsNullOrWhiteSpace($version)) {
+            throw "No Version property was found in FileTransferServiceApi.csproj."
+          }
+
+          "version=$version" >> $env:GITHUB_OUTPUT
+
+      - name: Publish ${{ matrix.framework }}
+        shell: pwsh
+        run: |
+          dotnet publish "FileTransferServiceApi/FileTransferServiceApi.csproj" `
+            --configuration Release `
+            --framework "${{ matrix.framework }}" `
+            --runtime win-x64 `
+            --self-contained true `
+            --output "${{ runner.temp }}/publish/${{ matrix.framework-name }}"
+
+      - name: Create ZIP archive
+        id: package
+        shell: pwsh
+        run: |
+          $fileName = "FTSApi-v${{ steps.project.outputs.version }}-win-x64-selfcontained-${{ matrix.framework-name }}.zip"
+          $archivePath = Join-Path "${{ runner.temp }}" $fileName
+
+          Compress-Archive `
+            -Path "${{ runner.temp }}/publish/${{ matrix.framework-name }}/*" `
+            -DestinationPath $archivePath `
+            -CompressionLevel Optimal
+
+          "file-name=$fileName" >> $env:GITHUB_OUTPUT
+          "archive-path=$archivePath" >> $env:GITHUB_OUTPUT
+
+      - name: Upload ZIP artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.package.outputs.file-name }}
+          path: ${{ steps.package.outputs.archive-path }}
+          if-no-files-found: error
+          compression-level: 0
