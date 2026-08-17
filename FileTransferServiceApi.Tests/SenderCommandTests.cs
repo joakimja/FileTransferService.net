@@ -1,3 +1,4 @@
+using FileTransferServiceApi.Presentation.CommandLine;
 using NUnit.Framework;
 
 namespace FileTransferServiceApi.Tests;
@@ -102,5 +103,72 @@ public sealed class ClientCommandTests
         Assert.That(parseError, Is.Null);
         Assert.That(command, Is.TypeOf<DeleteFileCommand>());
         Assert.That(((DeleteFileCommand)command!).RemoteFileName, Is.EqualTo("report.txt"));
+    }
+}
+
+[TestFixture]
+public sealed class ServerStartupArgumentsTests
+{
+    [Test]
+    public void TryParse_WithPortFolderAndPassword_ReturnsOverrides()
+    {
+        var args = new[]
+        {
+            "--port", "8080",
+            "--folder", @"C:\FileTransfer\Inbox",
+            "--password", "api-password"
+        };
+
+        var parsed = ServerStartupArguments.TryParse(args, out var arguments, out var parseError);
+
+        Assert.That(parsed, Is.True);
+        Assert.That(parseError, Is.Null);
+        Assert.That(arguments.Port, Is.EqualTo(8080));
+        Assert.That(arguments.StoragePath, Is.EqualTo(@"C:\FileTransfer\Inbox"));
+        Assert.That(arguments.SharedKey, Is.EqualTo("api-password"));
+    }
+
+    [Test]
+    public void TryParse_WithStoragePathAlias_ReturnsFolderOverride()
+    {
+        var args = new[]
+        {
+            "--storage-path", "Received"
+        };
+
+        var parsed = ServerStartupArguments.TryParse(args, out var arguments, out var parseError);
+
+        Assert.That(parsed, Is.True);
+        Assert.That(parseError, Is.Null);
+        Assert.That(arguments.StoragePath, Is.EqualTo("Received"));
+    }
+
+    [Test]
+    public void TryParse_WithInvalidPort_ReturnsHelpfulError()
+    {
+        var args = new[]
+        {
+            "--port", "70000"
+        };
+
+        var parsed = ServerStartupArguments.TryParse(args, out _, out var parseError);
+
+        Assert.That(parsed, Is.False);
+        Assert.That(parseError, Is.EqualTo("Port must be a number between 1 and 65535."));
+    }
+
+    [Test]
+    public void TryParse_WithKeyAlias_ReturnsSharedKeyOverride()
+    {
+        var args = new[]
+        {
+            "--key", "shared-key"
+        };
+
+        var parsed = ServerStartupArguments.TryParse(args, out var arguments, out var parseError);
+
+        Assert.That(parsed, Is.True);
+        Assert.That(parseError, Is.Null);
+        Assert.That(arguments.SharedKey, Is.EqualTo("shared-key"));
     }
 }

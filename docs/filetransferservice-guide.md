@@ -7,7 +7,7 @@ The solution is built around two roles:
 - an API service that exposes the file transfer endpoints
 - a client that talks to the API for upload, list, download, and delete operations
 
-The API runs as a self-hosted HTTP service on a fixed port. The client runs the same program in command mode and calls the API endpoints for each operation.
+The API runs as a self-hosted HTTP service on the configured port. The client runs the same program in command mode and calls the API endpoints for each operation.
 
 Uploaded files are sent as base64 in JSON format to the API.
 
@@ -287,6 +287,20 @@ Start:
 cd C:\FileTransferService
 FileTransferServiceApi.exe
 ```
+
+You can also override the API port, storage folder, and password at startup without editing `appsettings.json`:
+
+```cmd
+FileTransferServiceApi.exe --port 8080 --folder C:\FileTransfer\Inbox --password super-secret-key
+```
+
+Startup arguments:
+
+- `--port`: port the API should listen on, for example `8080`
+- `--folder`: directory where incoming files are stored
+- `--storage-path`: alias for `--folder`
+- `--password`: shared key used by the API
+- `--key`: alias for `--password`
 
 Then verify that the API responds:
 
@@ -569,7 +583,7 @@ Action:
 The most important files for the functionality are:
 
 - `FileTransferServiceApi/Program.cs`
-- `FileTransferServiceApi/SenderCommand.cs` containing the `ClientCommand` model
+- `FileTransferServiceApi/Presentation/CommandLine/SenderCommand.cs` containing the `ClientCommand` model
 - `FileTransferServiceApi/Services/FileStorageService.cs`
 - `FileTransferServiceApi/appsettings.json`
 

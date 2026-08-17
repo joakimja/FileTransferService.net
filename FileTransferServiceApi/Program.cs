@@ -1,6 +1,7 @@
 using FileTransferServiceApi;
 using FileTransferServiceApi.Models;
 using FileTransferServiceApi.Options;
+using FileTransferServiceApi.Presentation.CommandLine;
 using FileTransferServiceApi.Services;
 using Microsoft.AspNetCore.Http.Json;
 using Microsoft.Extensions.Options;
@@ -23,6 +24,18 @@ if (ClientCommand.TryParse(args, out var clientCommand, out var parseError))
 }
 
 var builder = WebApplication.CreateBuilder(args);
+
+if (!ServerStartupArguments.TryParse(args, out var serverStartupArguments, out var serverStartupParseError))
+{
+    Console.Error.WriteLine(serverStartupParseError);
+    ServerStartupArguments.WriteUsage();
+    return;
+}
+
+if (serverStartupArguments.HasOverrides)
+{
+    builder.Configuration.AddInMemoryCollection(serverStartupArguments.ToConfigurationOverrides());
+}
 
 builder.Services.Configure<FileTransferOptions>(
     builder.Configuration.GetSection(FileTransferOptions.SectionName));

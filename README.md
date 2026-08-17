@@ -7,7 +7,7 @@ The application is built around two roles:
 - an API service that exposes the file transfer endpoints
 - a client that can upload, list, download, and delete files by talking to that API
 
-The API listens on a fixed HTTP port. The client reads local files, converts them to base64 for upload, and can later list, download, and acknowledge files through the same API. Both sides use the same shared key to authorize the operations.
+The API listens on the configured HTTP port. The client reads local files, converts them to base64 for upload, and can later list, download, and acknowledge files through the same API. Both sides use the same shared key to authorize the operations.
 
 ## Documentation
 
@@ -70,6 +70,15 @@ Example for a normal user in `cmd.exe` with a published application:
 cd C:\FileTransferService
 FileTransferServiceApi.exe
 ```
+
+You can override the API port, receive folder, and password when starting the API:
+
+```cmd
+FileTransferServiceApi.exe --port 8080 --folder C:\FileTransfer\Inbox --password my-secret-key
+```
+
+`--folder` is the receive folder used by the API. `--storage-path` is also accepted as an alias.
+`--password` sets the shared key used by the API. `--key` is also accepted as an alias.
 
 ## Send File
 

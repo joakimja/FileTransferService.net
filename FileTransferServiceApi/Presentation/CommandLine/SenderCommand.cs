@@ -1,4 +1,4 @@
-namespace FileTransferServiceApi;
+namespace FileTransferServiceApi.Presentation.CommandLine;
 
 public abstract record ClientCommand(string TargetUrl, string SharedKey)
 {
