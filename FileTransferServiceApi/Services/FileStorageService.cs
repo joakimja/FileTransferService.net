@@ -5,7 +5,7 @@ namespace FileTransferServiceApi.Services;
 
 public interface IFileStorageService
 {
-    Task<StoredFileResult> SaveAsync(string incomingFileName, byte[] content, CancellationToken cancellationToken);
+    Task<StoredFileResult> SaveAsync(string incomingFileName, byte[] content, bool overwrite, CancellationToken cancellationToken);
 
     Task<IReadOnlyList<StoredFileEntry>> ListAsync(CancellationToken cancellationToken);
 
@@ -16,7 +16,7 @@ public interface IFileStorageService
 
 public sealed class FileStorageService(IOptions<FileTransferOptions> options) : IFileStorageService
 {
-    public async Task<StoredFileResult> SaveAsync(string incomingFileName, byte[] content, CancellationToken cancellationToken)
+    public async Task<StoredFileResult> SaveAsync(string incomingFileName, byte[] content, bool overwrite, CancellationToken cancellationToken)
     {
         var sanitizedFileName = Path.GetFileName(incomingFileName);
 
@@ -28,10 +28,12 @@ public sealed class FileStorageService(IOptions<FileTransferOptions> options) : 
         var storageRoot = Path.GetFullPath(options.Value.StoragePath);
         Directory.CreateDirectory(storageRoot);
 
-        var targetPath = GetUniquePath(storageRoot, sanitizedFileName);
+        var targetPath = overwrite
+            ? Path.Combine(storageRoot, sanitizedFileName)
+            : GetUniquePath(storageRoot, sanitizedFileName);
         await File.WriteAllBytesAsync(targetPath, content, cancellationToken);
 
-        return new StoredFileResult(sanitizedFileName, targetPath, content.LongLength);
+        return new StoredFileResult(Path.GetFileName(targetPath), targetPath, content.LongLength);
     }
 
     public Task<IReadOnlyList<StoredFileEntry>> ListAsync(CancellationToken cancellationToken)

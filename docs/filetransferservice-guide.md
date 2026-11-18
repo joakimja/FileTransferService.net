@@ -75,6 +75,8 @@ Request body:
 }
 ```
 
+Set `"Overwrite": true` in the request body to replace an existing file with the same name. When omitted or `false`, a numbered suffix is added instead. The response's `FileName` contains the name actually stored.
+
 ### List Available Files
 
 ```http
