@@ -56,6 +56,35 @@ public sealed class FileTransferEndpointTests
         Assert.That(await File.ReadAllTextAsync(storedFiles[0]), Is.EqualTo("hello from nunit"));
     }
 
+    [TestCase(null)]
+    [TestCase(false)]
+    [TestCase(true)]
+    public async Task PostFile_WithExistingName_RespectsOverwriteOption(bool? overwrite)
+    {
+        Directory.CreateDirectory(_storagePath);
+        var originalPath = Path.Combine(_storagePath, "notes.txt");
+        await File.WriteAllTextAsync(originalPath, "original content");
+        using var client = _factory.CreateClient();
+        client.DefaultRequestHeaders.Add("X-Api-Key", "test-shared-key");
+        var content = Convert.ToBase64String(Encoding.UTF8.GetBytes("new"));
+        object request = overwrite.HasValue
+            ? new { FileName = "notes.txt", ContentBase64 = content, Overwrite = overwrite.Value }
+            : new { FileName = "notes.txt", ContentBase64 = content };
+
+        var response = await client.PostAsJsonAsync("/api/v1/files", request);
+
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        var payload = await response.Content.ReadFromJsonAsync<FileTransferResponse>();
+        var expectedName = overwrite == true ? "notes.txt" : "notes_1.txt";
+        Assert.That(payload!.FileName, Is.EqualTo(expectedName));
+        Assert.That(await File.ReadAllTextAsync(Path.Combine(_storagePath, expectedName)), Is.EqualTo("new"));
+        Assert.That(Directory.GetFiles(_storagePath), Has.Length.EqualTo(overwrite == true ? 1 : 2));
+        if (overwrite != true)
+        {
+            Assert.That(await File.ReadAllTextAsync(originalPath), Is.EqualTo("original content"));
+        }
+    }
+
     [Test]
     public async Task PostFile_WithWrongKey_ReturnsUnauthorized()
     {

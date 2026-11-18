@@ -104,7 +104,7 @@ app.MapPost("/api/v1/files", async (
         });
     }
 
-    var storedFile = await fileStorageService.SaveAsync(request.FileName, fileBytes, cancellationToken);
+    var storedFile = await fileStorageService.SaveAsync(request.FileName, fileBytes, request.Overwrite, cancellationToken);
 
     logger.LogInformation("Stored transferred file {FileName} at {Path}.", storedFile.FileName, storedFile.StoredPath);
 
