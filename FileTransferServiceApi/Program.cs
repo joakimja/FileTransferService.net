@@ -23,7 +23,7 @@ if (ClientCommand.TryParse(args, out var clientCommand, out var parseError))
     return;
 }
 
-var builder = WebApplication.CreateBuilder(args);
+var builder = WebApplication.CreateBuilder(args.Where(arg => !string.Equals(arg, "--overwrite", StringComparison.OrdinalIgnoreCase)).ToArray());
 
 if (!ServerStartupArguments.TryParse(args, out var serverStartupArguments, out var serverStartupParseError))
 {
@@ -104,7 +104,7 @@ app.MapPost("/api/v1/files", async (
         });
     }
 
-    var storedFile = await fileStorageService.SaveAsync(request.FileName, fileBytes, request.Overwrite, cancellationToken);
+    var storedFile = await fileStorageService.SaveAsync(request.FileName, fileBytes, request.Overwrite || options.Value.Overwrite, cancellationToken);
 
     logger.LogInformation("Stored transferred file {FileName} at {Path}.", storedFile.FileName, storedFile.StoredPath);
 

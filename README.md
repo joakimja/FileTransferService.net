@@ -80,6 +80,12 @@ FileTransferServiceApi.exe --port 8080 --folder C:\FileTransfer\Inbox --password
 `--folder` is the receive folder used by the API. `--storage-path` is also accepted as an alias.
 `--password` sets the shared key used by the API. `--key` is also accepted as an alias.
 
+Start the API with `--overwrite` to replace existing files with the same name on every upload:
+
+```cmd
+FileTransferServiceApi.exe --port 8080 --folder C:\FileTransfer\Inbox --password my-secret-key --overwrite
+```
+
 ## Send File
 
 For API uploads, include `"Overwrite": true` in the JSON body to replace an existing file with the same name. If omitted or `false`, the upload is saved with a numbered suffix instead. See the [operations guide](docs/filetransferservice-guide.md) for the request format.

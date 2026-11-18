@@ -86,6 +86,24 @@ public sealed class FileTransferEndpointTests
     }
 
     [Test]
+    public async Task PostFile_WithServerOverwriteEnabled_ReplacesExistingFileWithoutRequestFlag()
+    {
+        _factory.Dispose();
+        _factory = new FileTransferApiFactory(_storagePath, "test-shared-key", overwrite: true);
+        Directory.CreateDirectory(_storagePath);
+        var path = Path.Combine(_storagePath, "notes.txt");
+        await File.WriteAllTextAsync(path, "original");
+        using var client = _factory.CreateClient();
+        client.DefaultRequestHeaders.Add("X-Api-Key", "test-shared-key");
+
+        var response = await client.PostAsJsonAsync("/api/v1/files", new { FileName = "notes.txt", ContentBase64 = Convert.ToBase64String(Encoding.UTF8.GetBytes("new")) });
+
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+        Assert.That(await File.ReadAllTextAsync(path), Is.EqualTo("new"));
+        Assert.That(Directory.GetFiles(_storagePath), Has.Length.EqualTo(1));
+    }
+
+    [Test]
     public async Task PostFile_WithWrongKey_ReturnsUnauthorized()
     {
         using var client = _factory.CreateClient();

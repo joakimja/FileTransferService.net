@@ -10,6 +10,8 @@ public sealed class FileTransferOptions
 
     public string StoragePath { get; set; } = "ReceivedFiles";
 
+    public bool Overwrite { get; set; }
+
     public bool EnableIpBasedKeyEncryption { get; set; }
 
     public List<string> ClientIpAddresses { get; set; } = [];
