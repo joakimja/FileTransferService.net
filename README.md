@@ -82,6 +82,8 @@ FileTransferServiceApi.exe --port 8080 --folder C:\FileTransfer\Inbox --password
 
 ## Send File
 
+For API uploads, include `"Overwrite": true` in the JSON body to replace an existing file with the same name. If omitted or `false`, the upload is saved with a numbered suffix instead. See the [operations guide](docs/filetransferservice-guide.md) for the request format.
+
 ```cmd
 cd C:\FileTransferService
 FileTransferServiceApi.exe send --file C:\temp\example.txt --url http://api-host:5050 --key my-secret-key
