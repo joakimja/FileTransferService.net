@@ -303,6 +303,7 @@ Startup arguments:
 - `--storage-path`: alias for `--folder`
 - `--password`: shared key used by the API
 - `--key`: alias for `--password`
+- `--overwrite`: replace an existing file with the same name on every upload. Without this flag, a numbered suffix is used unless the request specifies `Overwrite: true`.
 
 Then verify that the API responds:
 

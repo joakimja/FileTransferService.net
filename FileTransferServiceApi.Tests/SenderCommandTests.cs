@@ -110,6 +110,18 @@ public sealed class ClientCommandTests
 public sealed class ServerStartupArgumentsTests
 {
     [Test]
+    public void TryParse_WithOverwriteFlag_EnablesServerOverride()
+    {
+        var parsed = ServerStartupArguments.TryParse(["--overwrite", "--port", "8080"], out var arguments, out var error);
+
+        Assert.That(parsed, Is.True);
+        Assert.That(error, Is.Null);
+        Assert.That(arguments.Port, Is.EqualTo(8080));
+        Assert.That(arguments.Overwrite, Is.True);
+        Assert.That(arguments.ToConfigurationOverrides()["FileTransfer:Overwrite"], Is.EqualTo("true"));
+    }
+
+    [Test]
     public void TryParse_WithPortFolderAndPassword_ReturnsOverrides()
     {
         var args = new[]

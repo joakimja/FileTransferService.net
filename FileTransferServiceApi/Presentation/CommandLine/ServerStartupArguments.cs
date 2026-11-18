@@ -2,10 +2,10 @@ using FileTransferServiceApi.Options;
 
 namespace FileTransferServiceApi.Presentation.CommandLine;
 
-public sealed record ServerStartupArguments(int? Port, string? StoragePath, string? SharedKey)
+public sealed record ServerStartupArguments(int? Port, string? StoragePath, string? SharedKey, bool Overwrite = false)
 {
     public bool HasOverrides =>
-        Port is not null ||
+        Overwrite || Port is not null ||
         !string.IsNullOrWhiteSpace(StoragePath) ||
         !string.IsNullOrWhiteSpace(SharedKey);
 
@@ -17,10 +17,17 @@ public sealed record ServerStartupArguments(int? Port, string? StoragePath, stri
         int? port = null;
         string? storagePath = null;
         string? sharedKey = null;
+        var overwrite = false;
 
         for (var i = 0; i < args.Length; i++)
         {
             var current = args[i];
+
+            if (string.Equals(current, "--overwrite", StringComparison.OrdinalIgnoreCase))
+            {
+                overwrite = true;
+                continue;
+            }
 
             if (!IsRecognizedArgument(current))
             {
@@ -56,13 +63,18 @@ public sealed record ServerStartupArguments(int? Port, string? StoragePath, stri
             sharedKey = value;
         }
 
-        arguments = new ServerStartupArguments(port, storagePath, sharedKey);
+        arguments = new ServerStartupArguments(port, storagePath, sharedKey, overwrite);
         return true;
     }
 
     public IReadOnlyDictionary<string, string?> ToConfigurationOverrides()
     {
         var overrides = new Dictionary<string, string?>();
+
+        if (Overwrite)
+        {
+            overrides[$"{FileTransferOptions.SectionName}:{nameof(FileTransferOptions.Overwrite)}"] = "true";
+        }
 
         if (Port is not null)
         {
@@ -85,7 +97,7 @@ public sealed record ServerStartupArguments(int? Port, string? StoragePath, stri
     public static void WriteUsage()
     {
         Console.WriteLine("API startup arguments:");
-        Console.WriteLine("  FileTransferServiceApi [--port <port>] [--folder <path>] [--password <shared-key>]");
+        Console.WriteLine("  FileTransferServiceApi [--port <port>] [--folder <path>] [--password <shared-key>] [--overwrite]");
         Console.WriteLine("  FileTransferServiceApi [--port <port>] [--storage-path <path>] [--key <shared-key>]");
     }
 

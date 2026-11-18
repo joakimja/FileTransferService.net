@@ -10,12 +10,14 @@ public sealed class FileTransferApiFactory : WebApplicationFactory<Program>
         string storagePath,
         string sharedKey,
         bool enableIpBasedKeyEncryption = false,
-        IEnumerable<string>? clientIpAddresses = null)
+        IEnumerable<string>? clientIpAddresses = null,
+        bool overwrite = false)
     {
         StoragePath = storagePath;
         SharedKey = sharedKey;
         EnableIpBasedKeyEncryption = enableIpBasedKeyEncryption;
         ClientIpAddresses = clientIpAddresses?.ToArray() ?? [];
+        Overwrite = overwrite;
     }
 
     public string StoragePath { get; }
@@ -23,6 +25,8 @@ public sealed class FileTransferApiFactory : WebApplicationFactory<Program>
     public string SharedKey { get; }
 
     public bool EnableIpBasedKeyEncryption { get; }
+
+    public bool Overwrite { get; }
 
     public IReadOnlyList<string> ClientIpAddresses { get; }
 
@@ -36,6 +40,7 @@ public sealed class FileTransferApiFactory : WebApplicationFactory<Program>
                 ["FileTransfer:Port"] = "5050",
                 ["FileTransfer:SharedKey"] = SharedKey,
                 ["FileTransfer:StoragePath"] = StoragePath,
+                ["FileTransfer:Overwrite"] = Overwrite.ToString(),
                 ["FileTransfer:EnableIpBasedKeyEncryption"] = EnableIpBasedKeyEncryption.ToString()
             };
 
